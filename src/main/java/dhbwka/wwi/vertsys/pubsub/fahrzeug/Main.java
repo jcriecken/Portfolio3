@@ -114,9 +114,13 @@ public class Main {
         
         BufferedReader br= new BufferedReader(new FileReader(file));
         
-        while(br.readLine()!=null){
-            
+        for (String line = br.readLine(); line != null; line = br.readLine()) {
+            String[] arrayS = line.split("|");            
+            WGS84 temp = new WGS84();
+            temp.latitude= Double.parseDouble(arrayS[0]); 
+            temp.latitude= Double.parseDouble(arrayS[1]); 
         }
+        br.close();
 
         // TODO: Übergebene Datei parsen und Liste "waypoints" damit füllen
 
