@@ -130,8 +130,7 @@ public class Main {
         // TODO: Statusmeldung mit "type" = "StatusType.VEHICLE_READY" senden.
         // Die Nachricht soll soll an das Topic Utils.MQTT_TOPIC_NAME gesendet
         // werden.
-        Thread thread = new Thread("thread"){
-            public void run(){
+        
                 Timer timer = new Timer();
                 TimerTask tt= new TimerTask() {
                     @Override
@@ -141,8 +140,7 @@ public class Main {
                     }
                 };
                 timer.schedule(tt, 1000);
-            }
-        };
+       
         
         // TODO: Thread starten, der jede Sekunde die aktuellen Sensorwerte
         // des Fahrzeugs ermittelt und verschickt. Die Sensordaten sollen
