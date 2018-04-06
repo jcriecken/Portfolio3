@@ -112,13 +112,13 @@ public class Main {
     public static List<WGS84> parseItnFile(File file) throws IOException {
         List<WGS84> waypoints = new ArrayList<>();
         
-        BufferedReader br= new BufferedReader(new FileReader(file));
-        
-        for (String line = br.readLine(); line != null; line = br.readLine()) {
-            String[] arrayS = line.split("|");            
+        BufferedReader br= new BufferedReader(new FileReader(file));        
+        for (String line = br.readLine(); line != null; line = br.readLine()) {           
+            String[] arrayS = line.split("\\|");               
             WGS84 temp = new WGS84();
-            temp.latitude= Double.parseDouble(arrayS[0]); 
-            temp.latitude= Double.parseDouble(arrayS[1]); 
+            temp.longitude= Double.parseDouble(arrayS[0])/100; 
+            temp.latitude= Double.parseDouble(arrayS[1])/100;             
+            waypoints.add(temp);
         }
         br.close();
 
