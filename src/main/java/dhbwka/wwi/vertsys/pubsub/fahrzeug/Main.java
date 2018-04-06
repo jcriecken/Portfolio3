@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -71,7 +73,7 @@ public class Main {
         // und soll an das Topic Utils.MQTT_TOPIC_NAME gesendet werden.
         
         String mqttAddress = Utils.askInput("MQTT-Broker", Utils.MQTT_BROKER_ADDRESS);        
-        String topic ="Data";
+        String topic ="Fahrtdaten";
         String clientId="Empfaenger";        
         MemoryPersistence mP = new MemoryPersistence();        
         MqttClient client =null;
@@ -128,6 +130,19 @@ public class Main {
         // TODO: Statusmeldung mit "type" = "StatusType.VEHICLE_READY" senden.
         // Die Nachricht soll soll an das Topic Utils.MQTT_TOPIC_NAME gesendet
         // werden.
+        Thread thread = new Thread("thread"){
+            public void run(){
+                Timer timer = new Timer();
+                TimerTask tt= new TimerTask() {
+                    @Override
+                    public void run() {
+                        
+                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                };
+                timer.schedule(tt, 1000);
+            }
+        };
         
         // TODO: Thread starten, der jede Sekunde die aktuellen Sensorwerte
         // des Fahrzeugs ermittelt und verschickt. Die Sensordaten sollen
