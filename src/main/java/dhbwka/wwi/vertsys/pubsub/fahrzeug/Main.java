@@ -16,6 +16,13 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 /**
  * Hauptklasse unseres kleinen Progrämmchens.
@@ -54,8 +61,7 @@ public class Main {
         List<WGS84> waypoints = parseItnFile(new File(workdir, waypointFiles[index]));
 
         // Adresse des MQTT-Brokers abfragen
-        String mqttAddress = Utils.askInput("MQTT-Broker", Utils.MQTT_BROKER_ADDRESS);
-
+        
         // TODO: Sicherstellen, dass bei einem Verbindungsabbruch eine sog.
         // LastWill-Nachricht gesendet wird, die auf den Verbindungsabbruch
         // hinweist. Die Nachricht soll eine "StatusMessage" sein, bei der das
@@ -63,6 +69,59 @@ public class Main {
         //
         // Die Nachricht muss dem MqttConnectOptions-Objekt übergeben werden
         // und soll an das Topic Utils.MQTT_TOPIC_NAME gesendet werden.
+        
+        String mqttAddress = Utils.askInput("MQTT-Broker", Utils.MQTT_BROKER_ADDRESS);        
+        String topic ="Data";
+        String clientId="Empfaenger";        
+        MemoryPersistence mP = new MemoryPersistence();        
+        MqttClient client =null;
+        
+        try {
+            client =new MqttClient("mqttAdress", clientId, mP);            
+        }catch( Exception e){
+            e.printStackTrace();
+        }
+        
+        client.setCallback(new MqttCallback() {
+            @Override
+            public void connectionLost(Throwable thrwbl) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+
+            @Override
+            public void messageArrived(String string, MqttMessage mm) throws Exception {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken imdt) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }          
+        });    
+        try{
+            client.connect();
+            client.subscribe(topic);
+        }catch(MqttException e){
+            e.printStackTrace();
+        }
+        
+        int qos = 2;
+        String msg= "test";
+        String clientName="Sender";
+        try{
+            MqttClient clientS=new MqttClient("MqttAdress", clientName, mP);
+            MqttConnectOptions connOptions = new MqttConnectOptions();
+            connOptions.setCleanSession(false);
+            
+            clientS.connect(connOptions);
+            MqttMessage mqttMsg=new MqttMessage(msg.getBytes());
+            mqttMsg.setQos(qos);
+            clientS.publish(topic, mqttMsg);
+            
+        }catch(MqttException e){
+            e.printStackTrace();
+        }
+        
         
         // TODO: Verbindung zum MQTT-Broker herstellen.
 
