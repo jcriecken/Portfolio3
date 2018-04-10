@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -63,6 +64,7 @@ public class Main {
         List<WGS84> waypoints = parseItnFile(new File(workdir, waypointFiles[index]));
 
         // Adresse des MQTT-Brokers abfragen
+        String mqttAddress = Utils.askInput("MQTT-Broker", Utils.MQTT_BROKER_ADDRESS);
         
         // TODO: Sicherstellen, dass bei einem Verbindungsabbruch eine sog.
         // LastWill-Nachricht gesendet wird, die auf den Verbindungsabbruch
@@ -71,82 +73,49 @@ public class Main {
         //
         // Die Nachricht muss dem MqttConnectOptions-Objekt übergeben werden
         // und soll an das Topic Utils.MQTT_TOPIC_NAME gesendet werden.
-        
-        String mqttAddress = Utils.askInput("MQTT-Broker", Utils.MQTT_BROKER_ADDRESS);        
-        String topic ="Fahrtdaten";
-        String clientId="Empfaenger";        
-        MemoryPersistence mP = new MemoryPersistence();        
-        MqttClient client =null;
-        
-        try {
-            client =new MqttClient("mqttAdress", clientId, mP);            
-        }catch( Exception e){
-            e.printStackTrace();
-        }
-        
-        client.setCallback(new MqttCallback() {
-            @Override
-            public void connectionLost(Throwable thrwbl) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-
-            @Override
-            public void messageArrived(String string, MqttMessage mm) throws Exception {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-
-            @Override
-            public void deliveryComplete(IMqttDeliveryToken imdt) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }          
-        });    
-        try{
-            client.connect();
-            client.subscribe(topic);
-        }catch(MqttException e){
-            e.printStackTrace();
-        }
-        
-        int qos = 2;
-        String msg= "test";
-        String clientName="Sender";
-        try{
-            MqttClient clientS=new MqttClient("MqttAdress", clientName, mP);
-            MqttConnectOptions connOptions = new MqttConnectOptions();
-            connOptions.setCleanSession(false);
-            
-            clientS.connect(connOptions);
-            MqttMessage mqttMsg=new MqttMessage(msg.getBytes());
-            mqttMsg.setQos(qos);
-            clientS.publish(topic, mqttMsg);
-            
-        }catch(MqttException e){
-            e.printStackTrace();
-        }
-        
+        StatusMessage lastWill = new StatusMessage();
+        lastWill.vehicleId = vehicleId;
+        lastWill.message = "Verbindung abgebrochen!";
+        lastWill.type = StatusType.CONNECTION_LOST;
         
         // TODO: Verbindung zum MQTT-Broker herstellen.
+        String clientId = "Fahrzeug ID: " + vehicleId;
+        
+        MqttClient client = new MqttClient(mqttAddress, clientId);
+        MqttConnectOptions connOptions = new MqttConnectOptions();
+        connOptions.setCleanSession(true);
+        connOptions.setWill(Utils.MQTT_TOPIC_NAME, lastWill.toJson(), 0, false);
+        client.connect(connOptions);
 
         // TODO: Statusmeldung mit "type" = "StatusType.VEHICLE_READY" senden.
         // Die Nachricht soll soll an das Topic Utils.MQTT_TOPIC_NAME gesendet
         // werden.
-        
-                Timer timer = new Timer();
-                TimerTask tt= new TimerTask() {
-                    @Override
-                    public void run() {
-                        
-                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                    }
-                };
-                timer.schedule(tt, 1000);
-       
+        StatusMessage statusmeldung = new StatusMessage();
+        statusmeldung.vehicleId = vehicleId;
+        statusmeldung.type = StatusType.VEHICLE_READY;
+        client.publish(Utils.MQTT_TOPIC_NAME, statusmeldung.toJson(), 0, false);
         
         // TODO: Thread starten, der jede Sekunde die aktuellen Sensorwerte
         // des Fahrzeugs ermittelt und verschickt. Die Sensordaten sollen
         // an das Topic Utils.MQTT_TOPIC_NAME + "/" + vehicleId gesendet werden.
         Vehicle vehicle = new Vehicle(vehicleId, waypoints);
         vehicle.startVehicle();
+        
+        Timer timer = new Timer();
+        TimerTask tt= new TimerTask(){
+            @Override
+            public void run() {
+                SensorMessage sensorwerte = vehicle.getSensorData();
+                System.out.println(Utils.MQTT_TOPIC_NAME + "/" + vehicleId + " -> " + new String(sensorwerte.toJson(), StandardCharsets.UTF_8));
+                try{
+                    MqttMessage sensordaten = new MqttMessage(sensorwerte.toJson());
+                    client.publish(Utils.MQTT_TOPIC_NAME + "/" + vehicleId, sensordaten);
+                } catch(MqttException e){
+                    Utils.logException(e);
+                }
+            }
+        };
+        timer.schedule(tt, 1000);
 
         // Warten, bis das Programm beendet werden soll
         Utils.fromKeyboard.readLine();
@@ -159,6 +128,11 @@ public class Main {
         //
         // Anschließend die Verbindung trennen und den oben gestarteten Thread
         // beenden, falls es kein Daemon-Thread ist.
+        client.publish(Utils.MQTT_TOPIC_NAME, lastWill.toJson(), 0, false);
+        client.disconnect();
+        if(!Thread.currentThread().isDaemon()){//checking for daemon thread  
+            System.exit(0);
+        } 
     }
 
     /**
